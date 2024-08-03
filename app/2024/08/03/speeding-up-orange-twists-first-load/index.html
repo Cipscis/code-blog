@@ -56,7 +56,7 @@
 
 		<p>Many web APIs, like <code>setTimeout</code>, queue up a new task to run at a later time. These allow the browser to take a break in between tasks to do other work, like painting the page.</p>
 
-		<p>Newer Promise-based APIs will queue <strong>microtasks</strong> instead, and a task won't finished until all queued microtasks have also completed. Often these will result in new tasks anyway, but some code (like using <code>Promise.resolve</code> to create a Promise that's already resolved) can extend the duration of the current task.</p>
+		<p>Newer Promise-based APIs will queue <strong>microtasks</strong> instead, and a task won't finish until all queued microtasks have also completed. Often these will result in new tasks anyway, but some code (like using <code>Promise.resolve</code> to create a Promise that's already resolved) can extend the duration of the current task.</p>
 
 		<p>So if the browser tab looks "frozen", it's probably because there's a long-running task that's occupying the main thread. Now, back to the performance stuff.</p>
 
