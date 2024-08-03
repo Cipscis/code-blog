@@ -4,7 +4,9 @@ import dotenv from 'dotenv';
 
 import packageJson from '../package.json' with { type: 'json' };
 
-const defaultEnv = `PROJECT_NAME = "${packageJson.name}"
+const projectName = packageJson.name.replace(/^@.+\//, '');
+
+const defaultEnv = `PROJECT_NAME = "${projectName}"
 MODE = "development"
 PORT = "8080"`;
 
