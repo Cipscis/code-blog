@@ -1,1 +1,16 @@
-// TODO: Styles go here
+html {
+	color-scheme: light dark;
+
+	font-family: Arial, Helvetica, sans-serif;
+	text-wrap: pretty;
+}
+
+img {
+	display: block;
+	max-width: 100%;
+}
+
+.layout {
+	margin: 0 auto;
+	max-width: 80ch;
+}
