@@ -1,0 +1,108 @@
+<rss version="2.0">
+	<channel>
+		<title>Code blog</title>
+		<link>https://code.curly.kiwi/</link>
+		<description>Mark Hanna's code blog.</description>
+		<language>en-nz</language>
+		<docs>https://www.rssboard.org/rss-specification</docs>
+		<item>
+			<title>Speeding up Orange Twist's first load</title>
+			<link>https://code.curly.kiwi/2024/08/03/speeding-up-orange-twists-first-load/</link>
+			<guid>https://code.curly.kiwi/2024/08/03/speeding-up-orange-twists-first-load/</guid>
+			<pubDate>Sat, 03 Aug 2024 22:27:00 +1200</pubDate>
+			<description><![CDATA[<html><body>
+				<p><a href="https://orange-twist.curly.kiwi" target="_blank">Orange Twist</a> has been my main personal project just over a year now. It's a web app for managing tasks and notes, which I've tailored to work the way I think. But it's also my playground where I toy with new web technologies, experiment with different approaches, and find myself running into new obstacles that force me to learn.</p>
+
+				<p>If you like coding, I can't recommend having a personal project highly enough. I've found it to be a wonderful learning tool. It's been especially gratifying to also build something useful. I've been using Orange Twist to manage its own development, my work tasks, and my general life admin tasks.</p>
+
+				<p>This article is about some new stuff I learned and used while working on Orange Twist recently, where I managed to improve the performance of its first load.</p>
+
+				<h2>Orange Twist's initial load</h2>
+
+				<p>Orange Twist is built with <a href="https://preactjs.com/" target="_blank">Preact</a>, and it stores all its data in the browser. Since it's hosted on GitHub Pages, my only option for a back end is a static HTTP server anyway, and I like the way keeping all a user's data on their machine and never sending it to a server goes against the grain of some of the modern web's worst tendencies.</p>
+
+				<p>Recently, in my day job where I work on the front end of a <em>different</em> web app, I've been trying to figure out how to improve UI performance. It's turned out to be more interesting and less frustrating than I'd expected, so I've also ended up looking into improving the performance of Orange Twist too.</p>
+
+				<p>There are a few different potential sources of slow performance of websites and web apps. Usually an area of focus would be seeing if the back end could respond to network requests faster, but for this app that isn't really a thing (though I was able to find a way to reduce my bundle sizes).</p>
+
+				<p>I was definitely noticing a lag in the app loading initially, especially when using it on my phone. It would sort of stutter rapidly through a few different iterations of partially loaded data, before finally finishing.</p>
+
+				<p>When Orange Twist's main page first loads, there are essentially two things it needs to do:</p>
+
+				<ul>
+					<li>Load a few different pieces of data out of an Indexed DB</li>
+					<li>Use Preact to render the DOM tree based on that data, once it's loaded</li>
+				</ul>
+
+				<p>I've been using Orange Twist for quite a few months now, which means I've accumulated some data. On the main page, Orange Twist renders out a section for each day that has data, and those days might render a note and a set of tasks with names and statuses.</p>
+
+				<p>When the rendering is finally done, then it scrolls to the section for current day, which is useful but unfortunately felt like another bit of jank during the initial load.</p>
+
+				<p>This animation doesn't have the real timing, but it shows the steps that the browser would stutter through on each load:</p>
+
+				<img src="https://code.curly.kiwi/assets/images/2024-08-03-orange-twist-loading-jank.gif" alt="The browser appears to scroll down slightly, then load a bunch of days, before finally scrolling to the current day and showing a list of tasks." />
+
+				<h2>The event loop</h2>
+
+				<p>A brief aside before we get into what I found and what I changed, it's useful to have some understanding of the JavaScript event loop. I highly recommend Lydia Hallie's excellent video on the topic (seriously I wish I had this resource when I was a junior developer):</p>
+
+				<p><a href="https://www.youtube.com/watch?v=eiC58R16hb8" target="_blank">JavaScript Visualized - Event Loop, Web APIs, (Micro)task Queue</a></p>
+
+				<p>But to state the relevant bits briefly, a JavaScript <strong>task</strong> runs on the main thread, also known as the UI thread, and while a task is running the browser can't paint any updates to the page.</p>
+
+				<p>Many web APIs, like <code>setTimeout</code>, queue up a new task to run at a later time. These allow the browser to take a break in between tasks to do other work, like painting the page.</p>
+
+				<p>Newer Promise-based APIs will queue <strong>microtasks</strong> instead, and a task won't finish until all queued microtasks have also completed. Often these will result in new tasks anyway, but some code (like using <code>Promise.resolve</code> to create a Promise that's already resolved) can extend the duration of the current task.</p>
+
+				<p>So if the browser tab looks "frozen", it's probably because there's a long-running task that's occupying the main thread. Now, back to the performance stuff.</p>
+
+				<h2>Janky loading</h2>
+
+				<p>I've found the performance profiling tool in Chrome's developer tools particularly useful for getting a rough idea of why the browser is behaving in a particular way during this initial load. While it can let you drill right down into individual functions getting called if you need that level of detail, at the top level it will do useful things like highlight long-running tasks.</p>
+
+				<p>For example, here's what running the profiler during the initial load of a production build of v1.5.3 of Orange Twist (before any performance fixes) looks like on my machine:</p>
+
+				<img src="https://code.curly.kiwi/assets/images/2024-08-03-performance-slow.png" alt="A collection of graphs highlighting two long-running tasks, with the total loading time being around 450ms." />
+
+				<p>The first thing I found was causing a slowdown was that Preact was having to re-evaluate the DOM tree after each piece of data was loaded from Indexed DB. By making it wait until <em>all</em> the data was loaded before it rendered anything using that data, I was able to reduce the two long tasks into a single long task. This made the initial load <em>look</em> a bit less janky, but it didn't help too much with the overall speed itself.</p>
+
+				<img src="https://code.curly.kiwi/assets/images/2024-08-03-performance-mid.png" alt="A performance profile in Chrome's devtools showing one main long task, with the total loading time being around 400ms." />
+
+				<h2>Deferring some of the work</h2>
+
+				<p>When Orange Twist has a lot of data, the main page renders quite a large DOM tree. Since I'd already reduced the number of times this tree was being rendered, I started thinking about if there was a way I could make the DOM tree smaller.</p>
+
+				<p>Aside from the current day, all of those days Orange Twist renders on its main page are in sections that are collapsed by default. So really, all I need to render initially for each of those parts is their titles. However, there's a really nice feature of the <code>&amp;lt;details&amp;gt;</code> "disclosure" element in some browsers where you can find content in collapsed disclosures using the "Find in page" feature. So I didn't want to just wait until a section was expanded before rendering it because it would break that feature.</p>
+
+				<p>My initial thought was to use <code>setTimeout</code> with a randomised timeout, so the sections would be rendered gradually instead of all at once. That should give the browser time to "breathe" so it could render frames and react to user input in the meantime. But then by chance I ran across a web API that I hadn't seen before which seemed perfect for this use case: <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback" target="_blank"><code>requestIdleCallback</code></a>.</p>
+
+				<blockquote>
+					<p>The <code>window.requestIdleCallback()</code> method queues a function to be called during a browser's idle periods. This enables developers to perform background and low priority work on the main event loop, without impacting latency-critical events such as animation and input response.</p>
+
+					<cite><a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback" target="_blank">Window: requestIdleCallback() method | MDN</a></cite>
+				</blockquote>
+
+				<p>Perfect! Instead of trying to guess when the browser wouldn't be busy by using a random timeout, I could just ask it to wait until it's idle. Unfortunately, <a href="https://caniuse.com/requestidlecallback" target="_blank">Safari doesn't support <code>requestIdleCallback</code> at the moment</a> (though it is supported in the current Technical Preview) so I've still used that random timeout method as a graceful degradation.</p>
+
+				<p>After those two optimisations, and a couple of other adjustments to reduce the size of my JavaScript bundle, the time taken for Orange Twist's initial load with my testing data to complete went from <strong>400-450ms</strong> down to <strong>90-150ms</strong>.</p>
+
+				<img src="https://code.curly.kiwi/assets/images/2024-08-03-performance-fast.png" alt="A performance profile in Chrome's devtools, showing a task that barely qualifies as long, followed by a long tail of spread out very fast tasks. The last frame is rendered well before 200ms." />
+
+				<p>(Those red flags on the yellow boxes are warnings about idle callbacks being delayed, usually by something like 2-3ms)</p>
+
+				<p>Unsurprisingly, the initial load of the app feels <em>far</em> faster now. Technically it still takes around 400ms for everything to finish rendering, but because the important stuff is done first and the rest is told to fill in the space when the browser is idle, the app feels (and is!) much more immediately responsive.</p>
+
+				<p>There is still a brief flash of the UI without any content loaded, which I'm interested in trying to improve later on. You can see that in this animation, though the timing is tweaked to make it a bit more obvious:</p>
+
+				<img src="https://code.curly.kiwi/assets/images/2024-08-03-orange-twist-loading-improved.gif" alt="A brief flash of the Orange Twist UI with no inner content, before the fully loaded content appears." />
+
+				<p>If you're interested in looking at the code changes I talked about in this article, here are links to my PRs against Orange Twist:</p>
+
+				<ul>
+					<li><a href="https://github.com/Cipscis/orange-twist/pull/174" target="_blank">Wait for all data to be loaded before rendering</a></li>
+					<li><a href="https://github.com/Cipscis/orange-twist/pull/176" target="_blank">Defer rendering hidden content until the browser is idling</a></li>
+				</ul>
+			</body></html>]]></description>
+		</item>
+	</channel>
+</rss>
