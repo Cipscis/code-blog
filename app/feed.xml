@@ -7,7 +7,7 @@
 		<email>mark@curly.kiwi</email>
 		<uri>https://curly.kiwi</uri>
 	</author>
-	<link rel="self" href="https://curly.kiwi/feed.xml"/>
+	<link rel="self" href="https://code.curly.kiwi/feed.xml"/>
 	<id>https://code.curly.kiwi/</id>
 	<updated>2024-08-03T22:27:00+12:00</updated>
 	<entry>
