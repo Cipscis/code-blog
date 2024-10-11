@@ -9,7 +9,80 @@
 	</author>
 	<link rel="self" href="https://code.curly.kiwi/feed.xml"/>
 	<id>https://code.curly.kiwi/</id>
-	<updated>2024-08-03T22:27:00+12:00</updated>
+	<updated>2024-10-11T19:00:00+13:00</updated>
+	<entry>
+		<title>Using TypeScript to help with handling all cases</title>
+		<id>https://code.curly.kiwi/2024/10/11/using-typescript-to-help-with-handling-all-cases/</id>
+		<published>2024-10-11T19:00:00+13:00</published>
+		<updated>2024-10-11T19:00:00+13:00</updated>
+		<content type="xhtml">
+			<div xmlns="http://www.w3.org/1999/xhtml">
+				<p><a href="https://www.typescriptlang.org/" target="_blank">TypeScript</a> is a really useful tool for finding potential issues with JavaScript code while it's still in your IDE. It works by letting you annotate your JavaScript with type information, so your IDE has enough information to tell you if you're treating something like it's a different type.</p>
+
+				<p>The main downsides of using it are that you need a build system with a step that strips out all the type annotations to leave you with plain JavaScript that browsers can understand, and that it's a new language to learn on top of JavaScript. Personally I think the upsides well outweigh the downsides, and I use TypeScript in all my JavaScript projects now.</p>
+
+				<p>In this article, I want to go over a pattern that I've found particularly useful, which relies on a few TypeScript features.</p>
+
+				<p>I really like using <a href="https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes-func.html#discriminated-unions" target="_blank">discriminated unions</a>, where I might have code that needs to handle several different types of object. That code might look something like this (swap out <code>if</code>/<code>else if</code> for <code>switch</code>/<code>case</code> if that's what you prefer):</p>
+
+				<pre><code>if (item.type === ItemType.TYPE_A) {
+	// Do something to handle type A
+} else if (item.type === ItemType.TYPE_B) {
+	// Do something to handle type B
+}</code></pre>
+
+				<p>The danger of this approach, in regular JavaScript, is that if you ever add a new type to your list of types, it needs to be handled somehow in every place where you have a block like this. That's where TypeScript can come in, by taking advantage of <a href="https://www.typescriptlang.org/docs/handbook/2/functions.html#function-overloads" target="_blank">function overloads</a>:</p>
+
+				<pre><code>export function assertAllUnionMembersHandled(value: never): never;
+export function assertAllUnionMembersHandled(value: unknown): never {
+	throw new TypeError(`Union member ${value} was not handled.`);
+}</code></pre>
+
+				<p>When defining function overloads with TypeScript, first you list each function signature (starting with the most specific, as the first ones take priority) and then you write the actual function implementation with its own signature. When you call the function, the implementation signature is essentially ignored, so in this case your IDE will treat it as having the signature <code>(value: never) => never</code>.</p>
+
+				<p>This means, if you try to pass in anything that TypeScript thinks has a type other than <code>never</code>, your IDE will highlight it as an error. <code>never</code> is a funny type, I find it's most useful to think of it as a union type with zero members. So as you narrow a member type like <code>'A' | 'B' | 'C'</code>, once all three members have been removed through <a href="https://www.typescriptlang.org/docs/handbook/2/narrowing.html" target="_blank">type narrowing</a> you'll have zero members remaining, and that's <code>never</code>.</p>
+
+				<p>You can take advantage of this when handling all members of a union type by calling this function in the <code>else</code> (or <code>default</code>) part of your block:</p>
+
+				<pre><code>if (item.type === ItemType.TYPE_A) {
+	// Do something to handle type A
+} else if (item.type === ItemType.TYPE_B) {
+	// Do something to handle type B
+} else {
+	assertAllUnionMembersHandled(item);
+}</code></pre>
+
+				<p>Now, if you extend <code>item</code> to have a third possible type, TypeScript will see <code>item.type</code> as having that new member as its type, and highlight it as an error. If you have followed this pattern in every place where you need to handle each different member of a union type, they'll all be identified as errors that can guide you to handling your new type wherever necessary.</p>
+
+				<p>Here's <a href="https://www.typescriptlang.org/play/?#code/KYDwDg9gTgLgBAMwK4DsDGMCWEVwIYDOBwsAggDbkCqK2KAssALYBGJBAEnigCbnA8AFADc85JMABccFMGEkAlNNnyoAbgBQoSLESoMdfERIwK1Wjkat2XXvyGjxUuKgDWKCAHcUSmXJJwAN4aAJAwABZQXn6ecAAqAJ5gwACiUFFQggAGNIZMzGxQcAAkgY4SAL5wnoQyEPDh3HwCAHRZCpoVGhpoOATwAJIwzInJcAC8QRpwM-EAmgAKKQD6pNIA5KTrADTTs3GLKwBCG0c7ezMHS8sAwhs351W1vSj9mjBJwHBDI58TcIIPskIAhvsMmKNgAoANquYAJEFwIHARE-CGfAC6mg0yLBzH+wVmSM+0mRqPBkJaVxWpE0RPKzhQSGs6g0VQAPlMicjSZ9yb9klTDssjnTZgzpP0oJgUABzTpwTmE2Y84nA0FoynU25imYSuAsCAQfjcTrYnjANDkPBQL4vfpwTDg6Ro7EAejdcBa3u6mFBgidzBauPGobx6MF2tICi5sw9cFszTVX1IjtwBAg+WqeASbLgwHIxEd-sDTGDf1Dk01nyF1yOMeVM3jif4ybgRzTcAzWZqufjVQLRb9ANL5bGlfDWuFNwbcHjAB4ALRwGi9Jj5FDwCKYAhwcgyr4wCBd4CH8JfEgZOCy494XsXOeeluHv43Tvdr73geFr6NozEMhKFySwChsJp7ADcEOkfOAl2+C1Nz9TABCMfBcEvaADUtPAkCLTwvkaeQUHWBpwJQ3EbjZDQgA" target="_blank">an example in the TypeScript Playground</a> where using this function highlights an error where a union member is unhandled. Unfortunately, you'll see that the error message is not exactly clear:</p>
+
+				<blockquote>
+					Argument of type '{ type: "C"; value: boolean; }' is not assignable to parameter of type 'never'.<br/>
+					The call would have succeeded against this implementation, but implementation signatures of overloads are not externally visible.<br/>
+					<pre><code>const item: {
+	type: typeof ItemType.TYPE_C;
+	value: boolean;
+}</code></pre>
+				</blockquote>
+
+				<p>That's the biggest downside of this function. It highlights where those errors are, but not in a way that's particularly useful if you don't already understand how it's used or what those errors mean. The best way I've found so far for managing this is to add an explanatory JSDoc comment to the <code>assertAllUnionMembersHandled</code> function itself, so if anyone is confused by the error and hovers over the function itself, they can see an explanation of how to resolve errors like this. For example, this is the relevant part of the JSDoc comment I use in the code for <a href="https://orange-twist.curly.kiwi/" target="_blank">Orange Twist</a>:</p>
+
+				<blockquote>
+					<p><b>Investigating an error?</b></p>
+
+					<p>You probably need to add additional code to handle one or more values of an enum or another union type.</p>
+
+					<p>You can hover over the argument passed into this function to see the values that aren't handled currently. For example, if you see:</p>
+
+					<pre><code>const foo: "A" | "B";</code></pre>
+
+					<p>That means the union members <code>'A'</code> and <code>'B'</code> were not handled.</p>
+				</blockquote>
+
+				<p>If the code is run without fixing any type errors, the default behaviour in my example above is for it to throw an error. That can show up in the browser console during runtime, but it's a <em>lot</em> easier to take advantage of static analysis to find and fix these errors before they ever reach the browser than it is to make sure you're testing every possible code branch so you won't miss a potential thrown error.</p>
+			</div>
+		</content>
+	</entry>
 	<entry>
 		<title>Speeding up Orange Twist's first load</title>
 		<id>https://code.curly.kiwi/2024/08/03/speeding-up-orange-twists-first-load/</id>
