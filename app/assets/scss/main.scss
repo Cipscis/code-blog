@@ -1,16 +1,15 @@
-html {
-	color-scheme: light dark;
+@use "sass:meta";
 
-	font-family: Arial, Helvetica, sans-serif;
-	text-wrap: pretty;
+@layer reset, theme, components;
+
+@layer reset {
+	@include meta.load-css("reset")
 }
 
-img {
-	display: block;
-	max-width: 100%;
+@layer theme {
+	@include meta.load-css("theme/theme")
 }
 
-.layout {
-	margin: 0 auto;
-	max-width: 80ch;
+@layer components {
+	@include meta.load-css("components/components")
 }
