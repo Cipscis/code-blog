@@ -23,7 +23,7 @@
 
 		<p>I really like using <a href="https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes-func.html#discriminated-unions" target="_blank">discriminated unions</a>, where I might have code that needs to handle several different types of object. That code might look something like this (swap out <code>if</code>/<code>else if</code> for <code>switch</code>/<code>case</code> if that's what you prefer):</p>
 
-		<pre><code>if (item.type === ItemType.TYPE_A) {
+		<pre><code data-language="typescript">if (item.type === ItemType.TYPE_A) {
 	// Do something to handle type A
 } else if (item.type === ItemType.TYPE_B) {
 	// Do something to handle type B
@@ -31,7 +31,7 @@
 
 		<p>The danger of this approach, in regular JavaScript, is that if you ever add a new type to your list of types, it needs to be handled somehow in every place where you have a block like this. That's where TypeScript can come in, by taking advantage of <a href="https://www.typescriptlang.org/docs/handbook/2/functions.html#function-overloads" target="_blank">function overloads</a>:</p>
 
-		<pre><code>export function assertAllUnionMembersHandled(value: never): never;
+		<pre><code data-language="typescript">export function assertAllUnionMembersHandled(value: never): never;
 export function assertAllUnionMembersHandled(value: unknown): never {
 	throw new TypeError(`Union member ${value} was not handled.`);
 }</code></pre>
@@ -42,7 +42,7 @@ export function assertAllUnionMembersHandled(value: unknown): never {
 
 		<p>You can take advantage of this when handling all members of a union type by calling this function in the <code>else</code> (or <code>default</code>) part of your block:</p>
 
-		<pre><code>if (item.type === ItemType.TYPE_A) {
+		<pre><code data-language="typescript">if (item.type === ItemType.TYPE_A) {
 	// Do something to handle type A
 } else if (item.type === ItemType.TYPE_B) {
 	// Do something to handle type B
@@ -59,7 +59,7 @@ export function assertAllUnionMembersHandled(value: unknown): never {
 		<blockquote>
 			Argument of type '{ type: "C"; value: boolean; }' is not assignable to parameter of type 'never'.<br>
 			The call would have succeeded against this implementation, but implementation signatures of overloads are not externally visible.<br>
-			<pre><code>const item: {
+			<pre><code data-language="typescript">const item: {
 	type: typeof ItemType.TYPE_C;
 	value: boolean;
 }</code></pre>
@@ -74,11 +74,12 @@ export function assertAllUnionMembersHandled(value: unknown): never {
 
 			<p>You can hover over the argument passed into this function to see the values that aren't handled currently. For example, if you see:</p>
 
-			<pre><code>const foo: "A" | "B";</code></pre>
+			<pre><code data-language="typescript">const foo: "A" | "B";</code></pre>
 
 			<p>That means the union members <code>'A'</code> and <code>'B'</code> were not handled.</p>
 		</blockquote>
 
 		<p>If the code is run without fixing any type errors, the default behaviour in my example above is for it to throw an error. That can show up in the browser console during runtime, but it's a <em>lot</em> easier to take advantage of static analysis to find and fix these errors before they ever reach the browser than it is to make sure you're testing every possible code branch so you won't miss a potential thrown error.</p>
+	</article>
 </body>
 </html>
