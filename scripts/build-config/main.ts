@@ -9,4 +9,8 @@ export const config: BuildOptions = {
 	],
 	outdir: dist,
 	bundle: true,
+
+	target: 'esnext',
+	format: 'esm',
+	splitting: true,
 };
