@@ -1,6 +1,6 @@
 @use "sass:meta";
 
-@layer reset, theme, components;
+@layer reset, packages, theme, components;
 
 @layer reset {
 	@include meta.load-css("reset")

@@ -21,7 +21,7 @@
 
 		<p>This article is about some new stuff I learned and used while working on Orange Twist recently, where I managed to improve the performance of its first load.</p>
 
-		<h2>Orange Twist's initial load</h2>
+		<h2 id="orange-twists-initial-load">Orange Twist's initial load</h2>
 
 		<p>Orange Twist is built with <a href="https://preactjs.com/" target="_blank">Preact</a>, and it stores all its data in the browser. Since it's hosted on GitHub Pages, my only option for a back end is a static HTTP server anyway, and I like the way keeping all a user's data on their machine and never sending it to a server goes against the grain of some of the modern web's worst tendencies.</p>
 
@@ -44,9 +44,11 @@
 
 		<p>This animation doesn't have the real timing, but it shows the steps that the browser would stutter through on each load:</p>
 
-		<img src="/assets/images/2024-08-03-orange-twist-loading-jank.gif" alt="The browser appears to scroll down slightly, then load a bunch of days, before finally scrolling to the current day and showing a list of tasks.">
+		<figure>
+			<img src="/assets/images/2024-08-03-orange-twist-loading-jank.gif" alt="The browser appears to scroll down slightly, then load a bunch of days, before finally scrolling to the current day and showing a list of tasks.">
+		</figure>
 
-		<h2>The event loop</h2>
+		<h2 id="the-event-loop">The event loop</h2>
 
 		<p>A brief aside before we get into what I found and what I changed, it's useful to have some understanding of the JavaScript event loop. I highly recommend Lydia Hallie's excellent video on the topic (seriously I wish I had this resource when I was a junior developer):</p>
 
@@ -60,19 +62,23 @@
 
 		<p>So if the browser tab looks "frozen", it's probably because there's a long-running task that's occupying the main thread. Now, back to the performance stuff.</p>
 
-		<h2>Janky loading</h2>
+		<h2 id="janky-loading">Janky loading</h2>
 
 		<p>I've found the performance profiling tool in Chrome's developer tools particularly useful for getting a rough idea of why the browser is behaving in a particular way during this initial load. While it can let you drill right down into individual functions getting called if you need that level of detail, at the top level it will do useful things like highlight long-running tasks.</p>
 
 		<p>For example, here's what running the profiler during the initial load of a production build of v1.5.3 of Orange Twist (before any performance fixes) looks like on my machine:</p>
 
-		<img src="/assets/images/2024-08-03-performance-slow.png" alt="A collection of graphs highlighting two long-running tasks, with the total loading time being around 450ms.">
+		<figure>
+			<img src="/assets/images/2024-08-03-performance-slow.png" alt="A collection of graphs highlighting two long-running tasks, with the total loading time being around 450ms.">
+		</figure>
 
 		<p>The first thing I found was causing a slowdown was that Preact was having to re-evaluate the DOM tree after each piece of data was loaded from Indexed DB. By making it wait until <em>all</em> the data was loaded before it rendered anything using that data, I was able to reduce the two long tasks into a single long task. This made the initial load <em>look</em> a bit less janky, but it didn't help too much with the overall speed itself.</p>
 
-		<img src="/assets/images/2024-08-03-performance-mid.png" alt="A performance profile in Chrome's devtools showing one main long task, with the total loading time being around 400ms.">
+		<figure>
+			<img src="/assets/images/2024-08-03-performance-mid.png" alt="A performance profile in Chrome's devtools showing one main long task, with the total loading time being around 400ms.">
+		</figure>
 
-		<h2>Deferring some of the work</h2>
+		<h2 id="deferring-some-of-the-work">Deferring some of the work</h2>
 
 		<p>When Orange Twist has a lot of data, the main page renders quite a large DOM tree. Since I'd already reduced the number of times this tree was being rendered, I started thinking about if there was a way I could make the DOM tree smaller.</p>
 
@@ -90,7 +96,9 @@
 
 		<p>After those two optimisations, and a couple of other adjustments to reduce the size of my JavaScript bundle, the time taken for Orange Twist's initial load with my testing data to complete went from <strong>400-450ms</strong> down to <strong>90-150ms</strong>.</p>
 
-		<img src="/assets/images/2024-08-03-performance-fast.png" alt="A performance profile in Chrome's devtools, showing a task that barely qualifies as long, followed by a long tail of spread out very fast tasks. The last frame is rendered well before 200ms.">
+		<figure>
+			<img src="/assets/images/2024-08-03-performance-fast.png" alt="A performance profile in Chrome's devtools, showing a task that barely qualifies as long, followed by a long tail of spread out very fast tasks. The last frame is rendered well before 200ms.">
+		</figure>
 
 		<p>(Those red flags on the yellow boxes are warnings about idle callbacks being delayed, usually by something like 2-3ms)</p>
 
@@ -98,7 +106,9 @@
 
 		<p>There is still a brief flash of the UI without any content loaded, which I'm interested in trying to improve later on. You can see that in this animation, though the timing is tweaked to make it a bit more obvious:</p>
 
-		<img src="/assets/images/2024-08-03-orange-twist-loading-improved.gif" alt="A brief flash of the Orange Twist UI with no inner content, before the fully loaded content appears.">
+		<figure>
+			<img src="/assets/images/2024-08-03-orange-twist-loading-improved.gif" alt="A brief flash of the Orange Twist UI with no inner content, before the fully loaded content appears.">
+		</figure>
 
 		<p>If you're interested in looking at the code changes I talked about in this article, here are links to my PRs against Orange Twist:</p>
 
