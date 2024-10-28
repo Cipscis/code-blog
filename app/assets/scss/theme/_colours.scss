@@ -3,6 +3,7 @@
 	@media (prefers-color-scheme: light) {
 		--bg-primary: #eeeeee;
 		--colour-primary: #333333;
+		--colour-primary--low: #777777;
 
 		--bg-secondary: #dddddd;
 		--colour-secondary: #333333;
@@ -13,6 +14,7 @@
 	@media (prefers-color-scheme: dark) {
 		--bg-primary: #111111;
 		--colour-primary: #ffffff;
+		--colour-primary--low: #888888;
 
 		--bg-secondary: #333333;
 		--colour-secondary: #ffffff;
@@ -24,6 +26,11 @@
 @mixin contrast-primary {
 	background: var(--bg-primary);
 	color: var(--colour-primary);
+}
+
+@mixin contrast-primary--low {
+	background: var(--bg-primary);
+	color: var(--colour-primary--low);
 }
 
 @mixin contrast-secondary {
