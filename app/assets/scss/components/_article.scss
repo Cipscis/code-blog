@@ -1,4 +1,5 @@
 @use "../theme/colours";
+@use "../theme/fonts";
 
 article {
 	gap: 2rem;
@@ -10,11 +11,13 @@ article {
 
 	& {
 		h1 {
-			font-size: 2.4rem;
+			@include fonts.heading-1;
+			grid-column: bleed-right;
 		}
 
 		h2 {
-			font-size: 1.8rem;
+			@include fonts.heading-2;
+			grid-column: bleed-right;
 			margin-top: 2rem;
 		}
 
@@ -24,8 +27,7 @@ article {
 		ol,
 		table,
 		figcaption {
-			font-size: 1.2rem;
-			line-height: 1.5;
+			@include fonts.base;
 		}
 
 		a {
@@ -55,6 +57,10 @@ article {
 					background-position: 0 0;
 				}
 			}
+		}
+
+		code {
+			@include fonts.code;
 		}
 
 		p code:not(a code) {
@@ -105,4 +111,8 @@ article {
 			@include colours.contrast-secondary;
 		}
 	}
+}
+
+.article__meta {
+	@include fonts.meta;
 }
