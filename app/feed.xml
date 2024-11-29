@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 	<title>Code blog</title>
-	<subtitle>Mark Hanna's code blog.</subtitle>
+	<subtitle>Brooke Hart's code blog.</subtitle>
 	<author>
-		<name>Mark Hanna</name>
-		<email>mark@curly.kiwi</email>
+		<name>Brooke Hart</name>
+		<email>brooke@curly.kiwi</email>
 		<uri>https://curly.kiwi</uri>
 	</author>
 	<link rel="self" href="https://code.curly.kiwi/feed.xml"/>
