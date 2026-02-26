@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Using git while trans | Code blog</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<meta name="description" content="A guide for hiding or removing your deadname in git repositories.">
+	<link rel="alternate" href="/feed.xml" type="application/atom+xml" title="Atom feed">
+
+	<link rel="preload" href="/assets/fonts/roboto/roboto-regular.woff2" as="font" type="font/woff2" crossorigin>
+	<link rel="preload" href="/assets/fonts/sono/Sono-Regular.ttf" as="font" type="font/ttf" crossorigin>
+	<link rel="preload" href="/assets/fonts/roboto-mono/robotomono-regular.woff2" as="font" type="font/woff2" crossorigin>
+
+	<link rel="stylesheet" href="/assets/css/main.css">
+	<script type="module" src="/assets/js/dist/main.js"></script>
+</head>
+<body>
+	<article class="layout">
+		<h1>Using git while trans</h1>
+
+		<p class="article__meta">Published on 2026-02-27 by Brooke Hart</p>
+
+		<p>Git is <em>the</em> version control system. Yes, others exist, but if you're writing code you're probably using git.</p>
+
+		<p>Git was not designed with people's names changing in mind. This is a problem, because people's names do change for many reasons. The most common one many people will be familiar with is women changing their surname when marrying a man.</p>
+
+		<p>The one I am concerned about is the name change that trans people go through as part of a social transition. Unlike changing a surname at marriage, in which a person's "maiden name" can remain common knowledge, changing your name during a transition leaves behind what we commonly call a "deadname".</p>
+
+		<p>Revealing a trans person's deadname is a safety issue, which is a problem when working with git.</p>
+
+		<h2 id="removing-your-deadname-from-displayed-logs">Removing your deadname from displayed logs</h2>
+
+		<p>There is a built-in utility in git that allows displaying commits with an updated name. That is <a href="https://git-scm.com/docs/gitmailmap" target="_blank">git mailmap</a>. It allows you to create a `.mailmap` file in the root of a git repository that contains lines like this:</p>
+
+		<pre><code>Correct Name &lt;correct.email@company.tld&gt; &lt;commit.email@company.tld&gt;</code></pre>
+
+		<p>With a <code>.mailmap</code> file in place, git tools such as <code>git log</code> and <code>git blame</code> will display names found in a <code>.mailmap</code> file for commits that used an email address identified in there.</p>
+
+		<p>In order to find out what email addresses might exist against your deadname, you can run this command to see what commit authors exist in a repo's history:</p>
+
+		<pre><code>git shortlog --summary --email</code></pre>
+
+		<p>This will display an alphabetical list of commit author names and their associated email addresses, with the number of commits listed to the left. The same name with a different email address is treated as a different commit author.</p>
+
+		<p>Adding a <code>.mailmap</code> file is a useful way to effectively update the name against all your old commits without having to rewrite git history. This is useful because rewriting history is often not an option, especially in work environments.</p>
+
+		<p>However, this approach has some downsides as well:</p>
+
+		<ul>
+			<li>If the email address used for your commits contains your deadname, as is common in work environments, then it will be exposed to anyone viewing the <code>.mailmap</code> file.</li>
+			<li>GitHub, by far the most commonly used git hosting platform, at the time of writing does not support <code>.mailmap</code> and will still display your deadname against your old commits.</li>
+			<li>The original log, including your deadname, still exists and can be revealed by modifying or removing the <code>.mailmap</code> file.</li>
+		</ul>
+
+		<p>These shortcomings are only surmountable by rewriting history.</p>
+
+		<h2 id="removing-your-deadname-from-commit-author-data">Removing your deadname from commit author data</h2>
+
+		<p>Git does have a built-in feature called <code>filter-branch</code> that can be used for rewriting history, but for years now it's been recommended against. Instead, the git documentation now officially recommends the use of an external Python script called <a href="https://github.com/newren/git-filter-repo" target="_blank">git-filter-repo</a>.</p>
+
+		<p>You can use <code>git-filter-repo</code> to rewrite the history of a git repository. It expects to always be run against a fresh clone of your repo, so before using it you should create a fresh clone to work in. Using <code>git-filter-repo</code> will also remove your repo's remotes, this is intentionally added friction to encourage verifying your changes before force pushing them to the remote.</p>
+
+		<p>You can use <code>git-filter-repo</code> to modify author information against commits based on the contents of a <code>.mailmap</code> file:</p>
+
+		<pre><code>git filter-repo --use-mailmap</code></pre>
+
+		<p>If you want to use an external file (e.g. because a <code>.mailmap</code> file already exists for this repo and you only want to rewrite _your_ commits) you can also use an external file like this:</p>
+
+		<pre><code>git filter-repo --mailmap &lt;filename&gt;</code></pre>
+
+		<p>Note that, because <code>git-filter-repo</code> expects to work on a fresh clone, you'll want your external file to exist outside your repo's root directory.</p>
+
+		<p>Once you've done this, you can re-check the list of commit authors using <code>git shortlog</code> like in the example above. Make sure to remove any of your lines in a <code>.mailmap</code> file first, so you don't accidentally obscure any commits under your deadname at this point.</p>
+
+		<p>Once confirmed, you can add your remote back and force push your changes, e.g.</p>
+
+		<pre><code>git remote add origin &lt;url-to-origin&gt;
+git push --all --force</code></pre>
+
+		<h2 id="removing-your-deadname-from-committed-files">Removing your deadname from committed files</h2>
+
+		<p>Rewriting history like this won't remove a <code>.mailmap</code> file. If you don't want that file in your repo's git history either because it reveals your deadname then you'll need to remove it. If you want it removed from the history itself, you can also use the sensitive data removal feature <code>git-filter-repo</code> to rewrite history in a way that removes a file completely.</p>
+
+		<p>Remember, you'll need a (new) fresh clone to do this.</p>
+
+		<pre><code>git filter-repo --sensitive-data-removal --invert-paths --path .mailmap</code></pre>
+
+		<p>If you have other files that may have once contained your deadname, such as a <code>package.json</code> file, you can also use the sensitive data removal tool to change these.</p>
+
+		<p>First, you'll need to create an expressions file defining what text to replace. For example:</p>
+
+		<pre><code>Deadname==>My Name</code></pre>
+
+		<p>Then you can run a history-rewriting find and replace using that file by running this command:</p>
+
+		<pre><code>git filter-repo --sensitive-data-removal --replace-text &lt;path-to-expressions-file&gt;</code></pre>
+
+		<p>Be very careful with this step, as a global find and replace could result in unanticipated changes.</p>
+
+		<p>Once you're finished removing this sensitive data and you've verified that it worked as expected, you can force push your changes to update the history on the remote.</p>
+
+		<pre><code>git push --all --force</code></pre>
+
+		<h2 id="feedback">Feedback</h2>
+
+		<p>If you know of any other tips for removing your deadname from a git repo, I'd like to hear them! <a href="mailto:brooke+code-blog@curly.kiwi&amp;subject=Feedback: Using git while trans">Please email me your feedback</a>.</p>
+	</article>
+</body>
+</html>
