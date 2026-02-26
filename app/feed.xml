@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-	<title>Code blog</title>
-	<subtitle>Brooke Hart's code blog.</subtitle>
+	<title>Brooke's code blog</title>
 	<author>
 		<name>Brooke Hart</name>
 		<email>brooke@curly.kiwi</email>
