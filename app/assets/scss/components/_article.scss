@@ -57,6 +57,12 @@ article {
 					background-position: 0 0;
 				}
 			}
+
+			@media print {
+				background-clip: initial;
+				color: currentColor;
+				background: transparent;
+			}
 		}
 
 		code {
